@@ -1,0 +1,21 @@
+{
+  "name": "iOS 题宝库 · Interview Vault",
+  "short_name": "题宝库",
+  "description": "iOS 面试题库与间隔重复复习工作台:闪卡、测验、错题本、模拟面试,离线可用。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F5F5F7",
+  "theme_color": "#0A84FF",
+  "lang": "zh-CN",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

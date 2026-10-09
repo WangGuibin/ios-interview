@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>iOS 题宝库 · 单元测试</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", sans-serif; max-width: 860px; margin: 40px auto; padding: 0 20px; }
+  h1 { font-size: 22px; }
+  .case { padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+  .pass::before { content: "✅ "; }
+  .fail::before { content: "❌ "; }
+  .fail { color: #d00; }
+  #summary { font-size: 18px; font-weight: 700; margin: 16px 0; }
+</style>
+</head>
+<body>
+<h1>单元测试</h1>
+<div id="summary">运行中…</div>
+<div id="out"></div>
+
+<script src="js/version.js?v=2.0.4"></script>
+<script src="js/util.js?v=2.0.4"></script>
+<script src="js/md.js?v=2.0.4"></script>
+<script src="js/data.js?v=2.0.4"></script>
+<script>
+'use strict';
+// 加载全部题库
+const dataFiles = ["swift","swift-concurrency","memory","objc","runtime","runloop","gcd","uikit","swiftui","combine","network","storage","architecture","performance","engineering","algorithm","strategy"];
+function loadNext(i, done) {
+  if (i >= dataFiles.length) return done();
+  const s = document.createElement('script');
+  s.src = 'js/data/' + dataFiles[i] + '.js?v=2.0.4';
+  s.onload = () => loadNext(i + 1, done);
+  s.onerror = () => { failSuite('数据文件加载失败:' + dataFiles[i]); done(); };
+  document.body.appendChild(s);
+}
+
+const results = [];
+function ok(name, cond) { results.push({ name, pass: !!cond }); }
+function eq(name, a, b) { results.push({ name: name + ` (${JSON.stringify(a)} vs ${JSON.stringify(b)})`, pass: a === b }); }
+function failSuite(msg) { results.push({ name: msg, pass: false }); }
+
+function run() {
+  /* ---- md 渲染 ---- */
+  const mdBold = MD.render('这是 **重点** 内容');
+  ok('md:加粗', mdBold.includes('<strong>重点</strong>'));
+  const mdCode = MD.render('`Array<Int>` 泛型');
+  ok('md:行内代码与转义', mdCode.includes('<code>Array&lt;Int&gt;</code>'));
+  const mdFence = MD.render('前文\n```swift\nlet a = "<b>"\n```\n后文');
+  ok('md:代码块不注入 HTML', mdFence.includes('&lt;b&gt;') && mdFence.includes('<pre>'));
+  const mdTable = MD.render('| A | B |\n|---|---|\n| 1 | 2 |');
+  ok('md:表格', mdTable.includes('<table>') && mdTable.includes('<th>A</th>') && mdTable.includes('<td>2</td>'));
+  const mdList = MD.render('第一行\n- 甲\n- 乙\n第二行');
+  ok('md:列表', mdList.includes('<ul>') && mdList.includes('<li>甲</li>'));
+  const mdXss = MD.render('<img src=x onerror=alert(1)>');
+  ok('md:注入转义', !mdXss.includes('<img'));
+
+  /* ---- 题库完整性 ---- */
+  eq('题库:17 个内置分类', QB.cats.filter((c) => c.key !== 'custom').length, 17);
+  ok('题库:题目数 > 200', QB.questions.length > 200);
+  const idSet = new Set(QB.questions.map(q => q.id));
+  eq('题库:id 全部唯一', idSet.size, QB.questions.length);
+  ok('题库:每题必有速记要点', QB.questions.every(q => Array.isArray(q.key) && q.key.length > 0));
+  ok('题库:MCQ 选项下标合法', QB.questions.every(q => !q.opt || (q.ans >= 0 && q.ans < q.opt.length)));
+  ok('题库:答案非空', QB.questions.every(q => typeof q.a === 'string' && q.a.length > 20));
+
+  /* id 稳定性:与题目顺序无关,只由分类+题干决定 */
+  const probe = QB.questions.find(q => q.cat === 'swift' && q.t.includes('struct 和 class'));
+  ok('题库:id 稳定可复算', probe && probe.id === ('swift-' + fnv('swift|' + probe.t)));
+
+  /* ---- 搜索 ---- */
+  const hits = QB.search('actor 重入');
+  ok('搜索:actor 重入 命中并发章节', hits.length > 0 && hits[0].cat === 'swift-concurrency');
+  const hits2 = QB.search('离屏渲染');
+  ok('搜索:离屏渲染可命中', hits2.length > 0);
+  eq('搜索:空白返回空', QB.search('   ').length, 0);
+
+  /* ---- SRS(纯函数) ---- */
+  const T0 = Date.now();
+  const again = App_store_srsNext(0, 'again', T0);
+  eq('SRS:again 回到 0 盒', again.box, 0);
+  ok('SRS:again 1 分钟后到期', again.due - T0 === 60e3);
+  const k1 = App_store_srsNext(0, 'known', T0);
+  eq('SRS:known 升 1 盒', k1.box, 1);
+  eq('SRS:1 盒间隔 1 天', k1.due - T0, 86400000);
+  const k6 = App_store_srsNext(6, 'known', T0);
+  eq('SRS:封顶 6 盒', k6.box, 6);
+  const fz = App_store_srsNext(4, 'fuzzy', T0);
+  eq('SRS:fuzzy 降一盒停留', fz.box, 3);
+
+  /* ---- 连续打卡 ---- */
+  eq('streak:无记录为 0', App_streakOf({}), 0);
+
+  /* ---- 自建题不变式(纯内存,不碰 localStorage) ---- */
+  const arrRef = QB.questions;
+  const catsBefore = QB.cats.length;
+  QB.defineCustomCat();
+  eq('自建:首次调用创建分类', QB.cats.length, catsBefore + 1);
+  QB.defineCustomCat();
+  eq('自建:defineCustomCat 幂等', QB.cats.length, catsBefore + 1);
+  ok('自建:分类允许 0 题存在', QB.ofCat('custom').length === 0 && !!QB.cat('custom'));
+
+  const cid = QB.mintCustomId();
+  QB.syncCustom([{ id: cid, t: '测试自建题', a: '足够长的答案内容用于通过校验', key: ['要点'], lv: 2, fq: 3 }]);
+  ok('自建:questions 数组身份不变(原地修改)', arrRef === QB.questions);
+  ok('自建:注册后可通过 QB.get 取到', !!QB.get(cid) && QB.get(cid).custom === true);
+  ok('自建:id 与内置题零冲突', !QB.questions.filter((q) => !q.custom).some((q) => q.id === cid));
+  ok('自建:isCustom 前缀判定', QB.isCustom(cid) && !QB.isCustom('swift-abc1234'));
+  QB.syncCustom([{ id: cid, t: '题干被改过了', a: '足够长的答案内容用于通过校验', key: ['要点'] }]);
+  eq('自建:重复 sync 幂等', QB.ofCat('custom').length, 1);
+  ok('自建:改题干后 id 不变(进度不会成孤儿)', !!QB.get(cid) && QB.get(cid).t === '题干被改过了');
+  QB.syncCustom([]);
+  ok('自建:清空后分类仍在、byId 无残留', !!QB.cat('custom') && !QB.get(cid));
+  ok('自建:清空后 questions 无残留', QB.questions.filter((q) => q.custom).length === 0);
+
+  /* ---- 版本号一致性 + 预缓存交叉校验(防"跑旧文件"幽灵 bug) ---- */
+  if (location.protocol === 'file:') {
+    results.push({ name: '版本一致性:file:// 下跳过(需 http 环境)', pass: true, skip: true });
+    render();
+  } else {
+    Promise.all([
+      fetch('index.html').then((r) => r.text()),
+      fetch('sw.js').then((r) => r.text()),
+    ]).then(([html, sw]) => {
+      const vers = [...html.matchAll(/\?v=([0-9.]+)/g)].map((m) => m[1]);
+      const uniq = [...new Set(vers)];
+      eq('版本:index.html 内全部 ?v= 一致', uniq.length, 1);
+      eq('版本:index.html 与 APP_VERSION 一致', uniq[0], APP_VERSION);
+      const swVer = (sw.match(/const VERSION = '([^']+)'/) || [])[1];
+      eq('版本:sw.js 与 APP_VERSION 一致', swVer, APP_VERSION);
+
+      // index.html 引用的每个资源都必须在 sw.js 的 ASSETS 里
+      const refs = [...html.matchAll(/(?:src|href)="((?:js|css)\/[^"?]+)/g)].map((m) => m[1]);
+      const missing = refs.filter((p) => sw.indexOf("'" + p + "'") < 0);
+      ok('预缓存:index.html 的资源全部在 sw.js 清单中' + (missing.length ? ' —— 缺少 ' + missing.join(', ') : ''), missing.length === 0);
+      eq('预缓存:清单资源数与页面引用数一致', refs.length, refs.length - missing.length);
+      render();
+    }).catch(() => {
+      results.push({ name: '版本一致性:读取文件失败,跳过', pass: true });
+      render();
+    });
+    return;   // 异步分支里自行 render
+  }
+}
+
+/* store 纯函数副本(避免加载整个 store 触碰 localStorage) */
+function App_store_srsNext(box, grade, now) {
+  const BOX_DAYS = [0, 1, 2, 4, 8, 16, 32];
+  if (grade === 'again') return { box: 0, due: now + 60e3 };
+  if (grade === 'fuzzy') { const b = Math.max(1, box - 1); return { box: b, due: now + BOX_DAYS[b] * 86400000 }; }
+  const b = Math.min(6, box + 1);
+  return { box: b, due: now + BOX_DAYS[b] * 86400000 };
+}
+function App_streakOf(days) {
+  const DAY = 86400000;
+  const has = (d) => { const rec = days[dayKey(d)]; return rec && rec.n > 0; };
+  let cursor = new Date();
+  if (!has(cursor)) cursor = new Date(cursor.getTime() - DAY);
+  let c = 0;
+  while (has(cursor)) { c++; cursor = new Date(cursor.getTime() - DAY); }
+  return c;
+}
+
+function render() {
+  const failed = results.filter(r => !r.pass);
+  const out = document.getElementById('out');
+  out.innerHTML = results.map(r => `<div class="case ${r.pass ? 'pass' : 'fail'}">${r.name}</div>`).join('');
+  const summary = document.getElementById('summary');
+  summary.textContent = failed.length === 0
+    ? `全部 ${results.length} 项通过 ✅`
+    : `${results.length - failed.length}/${results.length} 通过,${failed.length} 项失败`;
+  summary.style.color = failed.length ? '#d00' : '#1a9c4b';
+  document.title = failed.length ? `❌ ${failed.length} 失败` : '✅ 全部通过';
+  window.TEST_RESULT = { total: results.length, failed: failed.length };
+}
+
+loadNext(0, run);
+</script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+/* ============================================================
+   iOS 题宝库 · forms.css
+   表单控件、Markdown 编辑器、笔记块、更新提示条
+   ============================================================ */
+
+/* ---------- 基础表单控件 ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.field-label .req { color: var(--danger); }
+.field-hint { font-size: 11.5px; color: var(--text-3); }
+
+.input, .textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1.5px solid transparent;
+  border-radius: var(--r-btn);
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.input:focus, .textarea:focus { background: var(--surface); border-color: var(--accent); }
+.input::placeholder, .textarea::placeholder { color: var(--text-faint); }
+.textarea { resize: vertical; min-height: 96px; }
+.textarea.tall { min-height: 220px; }
+.textarea.mono { font-family: var(--mono); font-size: 13px; }
+
+/* ---------- Markdown 编辑器(编辑 + 实时预览) ---------- */
+.md-editor { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); align-items: start; }
+.md-preview {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  min-height: 220px;
+  max-height: 460px;
+  overflow-y: auto;
+  background: var(--surface-2);
+}
+.md-preview:empty::before {
+  content: "预览会在这里实时显示";
+  color: var(--text-faint);
+  font-size: 13px;
+}
+
+/* ---------- 选项编辑器 ---------- */
+.opt-editor { display: flex; flex-direction: column; gap: 8px; }
+.opt-editor-row { display: flex; align-items: center; gap: 8px; }
+.opt-editor-row .opt-pick {
+  width: 30px; height: 30px; flex: none;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  font-size: 12.5px; font-weight: 700;
+  background: var(--surface-2); color: var(--text-3);
+  border: 1.5px solid transparent;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+.opt-editor-row .opt-pick:hover { color: var(--text); }
+.opt-editor-row .opt-pick.on { background: var(--ok); color: #fff; border-color: var(--ok); }
+
+/* ---------- 笔记块 ---------- */
+.note-block {
+  border-radius: var(--r-md);
+  background: var(--warn-soft);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.note-block .nb-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--warn);
+}
+.note-block .nb-head .ic { width: 13px; height: 13px; }
+.note-block textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  outline: none;
+  resize: vertical;
+  min-height: 52px;
+}
+.note-block textarea::placeholder { color: color-mix(in oklab, var(--warn) 45%, var(--text-faint)); }
+.note-block .nb-foot { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-3); }
+/* 列表行上的"有笔记"角标 */
+.note-dot { color: var(--warn); flex: none; display: inline-flex; }
+.note-dot .ic { width: 14px; height: 14px; }
+
+/* ---------- 新版本提示条 ---------- */
+.update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 130;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 16px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: var(--shadow-pop);
+  animation: toast-in 280ms var(--ease-spring) both;
+  max-width: calc(100vw - 32px);
+}
+.update-banner .btn {
+  background: oklch(1 0 0 / 0.22);
+  color: var(--accent-ink);
+  min-height: 30px;
+  padding: 4px 14px;
+  font-size: 13px;
+}
+.update-banner .btn:hover { background: oklch(1 0 0 / 0.32); }
+.update-banner .ub-close { color: var(--accent-ink); opacity: 0.75; }
+.update-banner .ub-close:hover { opacity: 1; background: oklch(1 0 0 / 0.18); }
+
+/* ---------- 离线状态提示 ---------- */
+.offline-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-radius: var(--r-pill);
+  padding: 3px 10px;
+}
+.offline-chip .ic { width: 13px; height: 13px; }
+
+/* ---------- 倒计时 / 计划条 ---------- */
+.countdown {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+.countdown .cd-num {
+  font-size: 34px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.countdown .cd-unit { font-size: 12px; color: var(--text-3); }
+.countdown.urgent .cd-num { color: var(--danger); }
+
+/* ---------- 计时器(模拟面试) ---------- */
+.timer-bar { display: flex; align-items: center; gap: 10px; }
+.timer-num {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.timer-num.warn { color: var(--warn); }
+.timer-num.danger { color: var(--danger); }
+
+/* ---------- 快捷键面板 ---------- */
+.kbd-panel { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); }
+.kbd-group h4 { font-size: 12px; font-weight: 700; color: var(--text-3); letter-spacing: 0.05em; margin-bottom: 8px; }
+.kbd-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 13px; }
+.kbd-row kbd {
+  font-family: var(--font);
+  font-size: 11.5px;
+  font-weight: 650;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+/* ---------- 键盘导航高亮 ---------- */
+.q-row.kb-cursor {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media (max-width: 859px) {
+  .md-editor { grid-template-columns: 1fr; }
+  .md-preview { max-height: 240px; }
+  .kbd-panel { grid-template-columns: 1fr; gap: var(--sp-4); }
+}
